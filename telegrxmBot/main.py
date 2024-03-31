@@ -23,7 +23,7 @@ ACCESS_TOKEN_SECRET = os.environ.get("ACCESS_TOKEN_SECRET")
 BEARER_TOKEN = os.environ.get("BEARER_TOKEN")
 MANAGER_CHAT_ID = os.environ.get("MANAGER_CHAT_ID")
 INFO_CHAT_ID = os.environ.get("INFO_CHAT_ID")
-PUBLISH_CHAT_ID = os.environ.get("XBOX_CHAT")
+PUBLISH_CHAT_ID = os.environ.get("PUBLISH_CHAT_ID")
 
 twitter_client = None
 media_client = None
@@ -44,6 +44,7 @@ async def publish_in_twitter(update: Update, _: ContextTypes.DEFAULT_TYPE) -> No
                 file = await new_file.download_to_drive()
                 media_id = media_client.media_upload(file).media_id
                 twitter_client.create_tweet(text=update.message.caption_html, media_ids=[media_id])
+                remove_jpgs()
             await bot.send_message(chat_id=INFO_CHAT_ID, text="Tweet published successfully")
         except tweepy.TwitterServerError as e:
             await bot.send_message(chat_id=INFO_CHAT_ID, text="Error: " + e)
@@ -58,6 +59,14 @@ def init_twitter():
     client_v1 = tweepy.API(oauthV1)
     client_v2 = tweepy.Client(bearer_token=BEARER_TOKEN, consumer_key=API_KEY, consumer_secret=API_KEY_SECRET, access_token=ACCESS_TOKEN, access_token_secret=ACCESS_TOKEN_SECRET)
     return client_v1, client_v2
+
+def remove_jpgs():
+    dir_name = "./"
+    fileNames = os.listdir(dir_name)
+
+    for file in fileNames:
+        if file.endswith(".jpg"):
+            os.remove(os.path.join(dir_name, file))
 
 def main() -> None:
     """Start the bot."""
