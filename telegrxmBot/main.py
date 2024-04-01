@@ -51,7 +51,7 @@ async def publish_in_twitter(update: Update, _: ContextTypes.DEFAULT_TYPE) -> No
         except:
             await bot.send_message(chat_id=INFO_CHAT_ID, text="Uknown error")
     else:
-        await bot.send_message(chat_id=MANAGER_CHAT_ID, text="name: " + update.effective_user.name + ", id: " + str(update.effective_user.id))
+        await bot.send_message(chat_id=MANAGER_CHAT_ID, text="name: " + update.effective_user.name + ", id: " + str(update.effective_user.id) + "\n\n" + update.message.text_html)
 
 # Non-bot functions related
 def init_twitter():
