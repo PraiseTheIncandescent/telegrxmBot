@@ -68,12 +68,20 @@ def remove_jpgs():
         if file.endswith(".jpg"):
             os.remove(os.path.join(dir_name, file))
 
+async def error_handler(_: object, __: ContextTypes.DEFAULT_TYPE) -> None:
+    await bot.send_message(chat_id=MANAGER_CHAT_ID, text="Another instance is running")
+    exit(-1)
+
+
 def main() -> None:
     """Start the bot."""
     # Bot token
     global bot
     application = Application.builder().token(BOT_TOKEN).build()
     bot = application.bot
+
+    # Error handler
+    application.add_error_handler(error_handler)
 
     # Commands
     # application.add_handler(CommandHandler("example", example))
@@ -82,8 +90,7 @@ def main() -> None:
     application.add_handler(MessageHandler((filters.TEXT | filters.ATTACHMENT) & ~filters.COMMAND, publish_in_twitter))
 
     # Run the bot until the user presses Ctrl-C
-    application.run_polling(allowed_updates=Update.ALL_TYPES)
+    application.run_polling(allowed_updates=Update.ALL_TYPES, poll_interval=5)
 
 if __name__ == "__main__":
-    if bot is None:
-        main()
+    main()
