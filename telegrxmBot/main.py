@@ -1,10 +1,11 @@
 import os
 import logging
-import tweepy
 
 from dotenv import load_dotenv
 from telegram import Update 
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
+
+import tweepy
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
@@ -83,7 +84,6 @@ def main() -> None:
 
     # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES)
-
 
 if __name__ == "__main__":
     main()
