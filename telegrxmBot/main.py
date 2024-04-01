@@ -90,7 +90,7 @@ def main() -> None:
     application.add_handler(MessageHandler((filters.TEXT | filters.ATTACHMENT) & ~filters.COMMAND, publish_in_twitter))
 
     # Run the bot until the user presses Ctrl-C
-    application.run_polling(allowed_updates=Update.ALL_TYPES, poll_interval=10)
+    application.run_polling(allowed_updates=Update.ALL_TYPES, poll_interval=5)
 
 if __name__ == "__main__":
     main()
