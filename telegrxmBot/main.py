@@ -1,11 +1,10 @@
 import os
 import logging
+import tweepy
 
 from dotenv import load_dotenv
 from telegram import Update 
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
-
-import tweepy
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
