@@ -52,23 +52,23 @@ async def echo_message(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
 # Non-bot functions related
 async def publish_in_twitter(message: Message) -> None:
     if message.effective_attachment is None:
-        formatted_text = removed_html_tags(message.text_html)
+        formatted_text = format_text(message.text_html)
         if len(formatted_text) <= 280:
             twitter_client.create_tweet(text=formatted_text)
             await bot.send_message(chat_id=INFO_CHAT_ID, text="Tweet published successfully")
         else:
-            await bot.send_message(chat_id=INFO_CHAT_ID, text="This tweet is too long, cannot be posted")
+            await bot.send_message(chat_id=INFO_CHAT_ID, text="This tweet is too long, cannot be posted. Max: 280")
     else:
         new_file = await message.effective_attachment[-1].get_file()
         file = await new_file.download_to_drive()
         media_id = media_client.media_upload(file).media_id
-        formatted_text = removed_html_tags(message.caption_html)
+        formatted_text = format_text(message.caption_html)
         if len(formatted_text) <= 280:
             twitter_client.create_tweet(text=formatted_text, media_ids=[media_id])
             remove_jpgs()
             await bot.send_message(chat_id=INFO_CHAT_ID, text="Tweet published successfully")
         else:
-            await bot.send_message(chat_id=INFO_CHAT_ID, text="This tweet is too long, cannot be posted")
+            await bot.send_message(chat_id=INFO_CHAT_ID, text="This tweet is too long, cannot be posted. Max: 280")
 
 def init_twitter():
     oauthV1 = tweepy.OAuth1UserHandler(consumer_key=API_KEY, consumer_secret=API_KEY_SECRET, access_token=ACCESS_TOKEN, access_token_secret=ACCESS_TOKEN_SECRET)
@@ -76,9 +76,18 @@ def init_twitter():
     client_v2 = tweepy.Client(bearer_token=BEARER_TOKEN, consumer_key=API_KEY, consumer_secret=API_KEY_SECRET, access_token=ACCESS_TOKEN, access_token_secret=ACCESS_TOKEN_SECRET)
     return client_v1, client_v2
 
-def removed_html_tags(text: str):
-    clean = re.compile('<[^aA](.*?)>')
-    return re.sub(clean, '', text)
+def format_text(text: str):
+    pattern = r'<(?!/?(a|A)\b)[^>]*>'
+    return extract_href_from_a(re.sub(pattern, '', text))
+
+def extract_href_from_a(text: str):
+    pattern = r'<a\s+href="([^"]*)"[^>]*>(.*?)<\/a>'
+    def reemplazar_etiqueta(match):
+        href = match.group(1)
+        contenido = match.group(2)
+        return f'{contenido} ({href})'
+    
+    return re.sub(pattern, reemplazar_etiqueta, text)
 
 def remove_jpgs():
     dir_name = "./"
