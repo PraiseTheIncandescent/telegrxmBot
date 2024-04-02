@@ -52,10 +52,9 @@ async def echo_message(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
 # Non-bot functions related
 async def publish_in_twitter(message: Message) -> None:
     if message.effective_attachment is None:
-        new_text = removed_html_tags(message.text_html)
-        logger.info(len(new_text))
-        if len(new_text) <= 280:
-            twitter_client.create_tweet(text=new_text)
+        formatted_text = removed_html_tags(message.text_html)
+        if len(formatted_text) <= 280:
+            twitter_client.create_tweet(text=formatted_text)
             await bot.send_message(chat_id=INFO_CHAT_ID, text="Tweet published successfully")
         else:
             await bot.send_message(chat_id=INFO_CHAT_ID, text="This tweet is too long, cannot be posted")
@@ -63,10 +62,9 @@ async def publish_in_twitter(message: Message) -> None:
         new_file = await message.effective_attachment[-1].get_file()
         file = await new_file.download_to_drive()
         media_id = media_client.media_upload(file).media_id
-        new_text = removed_html_tags(message.caption_html)
-        logger.info(len(new_text))
-        if len(new_text) <= 280:
-            twitter_client.create_tweet(text=new_text, media_ids=[media_id])
+        formatted_text = removed_html_tags(message.caption_html)
+        if len(formatted_text) <= 280:
+            twitter_client.create_tweet(text=formatted_text, media_ids=[media_id])
             remove_jpgs()
             await bot.send_message(chat_id=INFO_CHAT_ID, text="Tweet published successfully")
         else:
