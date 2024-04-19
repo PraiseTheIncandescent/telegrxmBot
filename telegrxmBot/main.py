@@ -1,6 +1,7 @@
 import os
 import re
 import logging
+import html
 import tweepy
 
 from dotenv import load_dotenv
@@ -80,8 +81,9 @@ def init_twitter():
     return client_v1, client_v2
 
 def format_text(text: str):
+    unescaped_text = html.unescape(text)
     pattern = r'<(?!/?(a|A)\b)[^>]*>'
-    return extract_href_from_a(re.sub(pattern, '', text))
+    return extract_href_from_a(re.sub(pattern, '', unescaped_text))
 
 def extract_href_from_a(text: str):
     pattern = r'<a\s+href="([^"]*)"[^>]*>(.*?)<\/a>'
