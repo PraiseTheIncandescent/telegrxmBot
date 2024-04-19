@@ -39,10 +39,10 @@ async def echo_message(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
             media_client, twitter_client = init_twitter()
         try:
             await publish_in_twitter(update.effective_message)
-        except tweepy.TwitterServerError as e:
-            await bot.send_message(chat_id=INFO_CHAT_ID, text="Error: " + e)
-        except Exception as Argument:
-            logger.error("Error: " + Argument)
+        except tweepy.TwitterServerError as tError:
+            await bot.send_message(chat_id=MANAGER_CHAT_ID, text="Twitter error: " + str(tError))
+        except Exception as error:
+            await bot.send_message(chat_id=MANAGER_CHAT_ID, text="Error: " + str(error))
     else:
         if update.effective_message.effective_attachment is None:
             await bot.send_message(chat_id=MANAGER_CHAT_ID, text="username: " + update.effective_chat.username + ", id: " + str(update.effective_chat.id) + "\n\n" + update.effective_message.text_html)
@@ -59,21 +59,24 @@ async def publish_in_twitter(message: Message) -> None:
         else:
             await bot.send_message(chat_id=INFO_CHAT_ID, text="This tweet is too long, cannot be posted. Max: 280")
     else:
-        new_file = await message.effective_attachment[-1].get_file()
-        file = await new_file.download_to_drive()
-        media_id = media_client.media_upload(file).media_id
         formatted_text = format_text(message.caption_html)
         if len(formatted_text) <= 280:
-            twitter_client.create_tweet(text=formatted_text, media_ids=[media_id])
-            remove_jpgs()
-            await bot.send_message(chat_id=INFO_CHAT_ID, text="Tweet published successfully")
+            if type(message.effective_attachment) is tuple:
+                new_file = await message.effective_attachment[-1].get_file()
+                file = await new_file.download_to_drive()
+                media_id = media_client.media_upload(file).media_id_string
+                twitter_client.create_tweet(text=formatted_text, media_ids=[media_id])
+                remove_uploaded_files()
+                await bot.send_message(chat_id=INFO_CHAT_ID, text="Tweet published successfully")
+            else:
+                await bot.send_message(chat_id=INFO_CHAT_ID, text="Attachment not allowed")
         else:
             await bot.send_message(chat_id=INFO_CHAT_ID, text="This tweet is too long, cannot be posted. Max: 280")
 
 def init_twitter():
     oauthV1 = tweepy.OAuth1UserHandler(consumer_key=API_KEY, consumer_secret=API_KEY_SECRET, access_token=ACCESS_TOKEN, access_token_secret=ACCESS_TOKEN_SECRET)
-    client_v1 = tweepy.API(oauthV1)
-    client_v2 = tweepy.Client(bearer_token=BEARER_TOKEN, consumer_key=API_KEY, consumer_secret=API_KEY_SECRET, access_token=ACCESS_TOKEN, access_token_secret=ACCESS_TOKEN_SECRET)
+    client_v1 = tweepy.API(oauthV1, wait_on_rate_limit=True)
+    client_v2 = tweepy.Client(bearer_token=BEARER_TOKEN, consumer_key=API_KEY, consumer_secret=API_KEY_SECRET, access_token=ACCESS_TOKEN, access_token_secret=ACCESS_TOKEN_SECRET, wait_on_rate_limit=True)
     return client_v1, client_v2
 
 def format_text(text: str):
@@ -82,19 +85,19 @@ def format_text(text: str):
 
 def extract_href_from_a(text: str):
     pattern = r'<a\s+href="([^"]*)"[^>]*>(.*?)<\/a>'
-    def reemplazar_etiqueta(match):
+    def replace_tag(match):
         href = match.group(1)
-        contenido = match.group(2)
-        return f'{contenido} ({href})'
-    
-    return re.sub(pattern, reemplazar_etiqueta, text)
+        content = match.group(2)
+        return f'{content} ({href})'
 
-def remove_jpgs():
+    return re.sub(pattern, replace_tag, text)
+
+def remove_uploaded_files():
     dir_name = "./"
     fileNames = os.listdir(dir_name)
 
     for file in fileNames:
-        if file.endswith(".jpg"):
+        if file.endswith((".jpg", ".mp4")):
             os.remove(os.path.join(dir_name, file))
 
 def main() -> None:
