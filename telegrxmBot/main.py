@@ -3,15 +3,16 @@ import re
 import logging
 import html
 import tweepy
+import threading
 
 from dotenv import load_dotenv
+from flask import Flask
 from telegram import Update, Message
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
-# set higher logging level for httpx to avoid all GET and POST requests being logged
 logging.getLogger("httpx").setLevel(logging.WARNING)
 
 logger = logging.getLogger(__name__)
@@ -30,6 +31,13 @@ PUBLISH_CHAT_ID = os.environ.get("PUBLISH_CHAT_ID")
 twitter_client = None
 media_client = None
 bot = None
+
+# Flask app para Render
+app = Flask(__name__)
+
+@app.route('/')
+def home():
+    return "Bot corriendo en Render ✅"
 
 # Bot function handlers
 async def echo_message(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
@@ -75,9 +83,21 @@ async def publish_in_twitter(message: Message) -> None:
             await bot.send_message(chat_id=INFO_CHAT_ID, text="This tweet is too long, cannot be posted. Max: 280")
 
 def init_twitter():
-    oauthV1 = tweepy.OAuth1UserHandler(consumer_key=API_KEY, consumer_secret=API_KEY_SECRET, access_token=ACCESS_TOKEN, access_token_secret=ACCESS_TOKEN_SECRET)
+    oauthV1 = tweepy.OAuth1UserHandler(
+        consumer_key=API_KEY,
+        consumer_secret=API_KEY_SECRET,
+        access_token=ACCESS_TOKEN,
+        access_token_secret=ACCESS_TOKEN_SECRET
+    )
     client_v1 = tweepy.API(oauthV1, wait_on_rate_limit=True)
-    client_v2 = tweepy.Client(bearer_token=BEARER_TOKEN, consumer_key=API_KEY, consumer_secret=API_KEY_SECRET, access_token=ACCESS_TOKEN, access_token_secret=ACCESS_TOKEN_SECRET, wait_on_rate_limit=True)
+    client_v2 = tweepy.Client(
+        bearer_token=BEARER_TOKEN,
+        consumer_key=API_KEY,
+        consumer_secret=API_KEY_SECRET,
+        access_token=ACCESS_TOKEN,
+        access_token_secret=ACCESS_TOKEN_SECRET,
+        wait_on_rate_limit=True
+    )
     return client_v1, client_v2
 
 def format_text(text: str):
@@ -91,32 +111,26 @@ def extract_href_from_a(text: str):
         href = match.group(1)
         content = match.group(2)
         return f'{content} ({href})'
-
     return re.sub(pattern, replace_tag, text)
 
 def remove_uploaded_files():
     dir_name = "./"
     fileNames = os.listdir(dir_name)
-
     for file in fileNames:
         if file.endswith((".jpg", ".mp4")):
             os.remove(os.path.join(dir_name, file))
 
-def main() -> None:
-    """Start the bot."""
-    # Bot token
+def run_bot():
     global bot
     application = Application.builder().token(BOT_TOKEN).build()
     bot = application.bot
-
-    # Commands
-    # application.add_handler(CommandHandler("example", example))
-
-    # On every message avoiding commands
     application.add_handler(MessageHandler((filters.TEXT | filters.ATTACHMENT) & ~filters.COMMAND, echo_message))
-
-    # Run the bot until the user presses Ctrl-C
     application.run_polling(allowed_updates=Update.ALL_TYPES, poll_interval=5)
 
 if __name__ == "__main__":
-    main()
+    # Arrancar el bot en un hilo separado
+    threading.Thread(target=run_bot).start()
+    
+    # Arrancar Flask para exponer puerto
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
