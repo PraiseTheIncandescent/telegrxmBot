@@ -10,13 +10,14 @@ from flask import Flask
 from telegram import Update, Message
 from telegram.ext import Application, ContextTypes, MessageHandler, filters
 
+# -------------------- Logging --------------------
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
 logging.getLogger("httpx").setLevel(logging.WARNING)
-
 logger = logging.getLogger(__name__)
 
+# -------------------- Env vars --------------------
 load_dotenv()
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 API_KEY = os.environ.get("API_KEY")
@@ -32,14 +33,14 @@ twitter_client = None
 media_client = None
 bot = None
 
-# Flask app para Render
+# -------------------- Flask --------------------
 app = Flask(__name__)
 
 @app.route('/')
 def home():
     return "Bot running in Render ✅"
 
-# Bot function handlers
+# -------------------- Bot fn --------------------
 async def echo_message(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
     global twitter_client
     global media_client
@@ -54,11 +55,10 @@ async def echo_message(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
             await bot.send_message(chat_id=MANAGER_CHAT_ID, text="Error: " + str(error))
     else:
         if update.effective_message.effective_attachment is None:
-            await bot.send_message(chat_id=MANAGER_CHAT_ID, text="username: " + update.effective_chat.username + ", id: " + str(update.effective_chat.id) + "\n\n" + update.effective_message.text_html)
+            await bot.send_message(chat_id=MANAGER_CHAT_ID, text=f"username: {update.effective_chat.username}, id: {update.effective_chat.id}\n\n{update.effective_message.text_html}")
         else:
-            await bot.send_message(chat_id=MANAGER_CHAT_ID, text="username: " + update.effective_chat.username + ", id: " + str(update.effective_chat.id) + "\n\n" + update.effective_message.caption_html)
+            await bot.send_message(chat_id=MANAGER_CHAT_ID, text=f"username: {update.effective_chat.username}, id: {update.effective_chat.id}\n\n{update.effective_message.caption_html}")
 
-# Non-bot functions related
 async def publish_in_twitter(message: Message) -> None:
     if message.effective_attachment is None:
         formatted_text = format_text(message.text_html)
@@ -70,7 +70,7 @@ async def publish_in_twitter(message: Message) -> None:
     else:
         formatted_text = format_text(message.caption_html)
         if len(formatted_text) <= 280:
-            if type(message.effective_attachment) is tuple:
+            if isinstance(message.effective_attachment, tuple):
                 new_file = await message.effective_attachment[-1].get_file()
                 file = await new_file.download_to_drive()
                 media_id = media_client.media_upload(file).media_id_string
@@ -115,21 +115,22 @@ def extract_href_from_a(text: str):
 
 def remove_uploaded_files():
     dir_name = "./"
-    fileNames = os.listdir(dir_name)
-    for file in fileNames:
+    for file in os.listdir(dir_name):
         if file.endswith((".jpg", ".mp4")):
             os.remove(os.path.join(dir_name, file))
 
-def run_bot():
-    print("🚀 Bot initialized!")
-    global bot
+# -------------------- Main --------------------
+if __name__ == "__main__":
+    print("🚀 Bot inicializado!")
+
+    # Initialize bot
     application = Application.builder().token(BOT_TOKEN).build()
     bot = application.bot
     application.add_handler(MessageHandler((filters.TEXT | filters.ATTACHMENT) & ~filters.COMMAND, echo_message))
-    application.run_polling(allowed_updates=Update.ALL_TYPES, poll_interval=5)
 
-if __name__ == "__main__":
-    threading.Thread(target=run_bot).start()
-    
+    # Exec Flask in a different thread
     port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    threading.Thread(target=lambda: app.run(host="0.0.0.0", port=port)).start()
+
+    # Exec bot in main thread
+    application.run_polling(allowed_updates=Update.ALL_TYPES, poll_interval=5)
