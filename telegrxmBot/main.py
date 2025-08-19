@@ -130,7 +130,7 @@ def keep_alive():
             print("Ping sent to keep app awake ✅")
         except Exception as e:
             print("Ping error:", e)
-        time.sleep(300)  # every 5 minutes
+        time.sleep(600)  # every 10 minutes
 
 # -------------------- Main --------------------
 if __name__ == "__main__":
