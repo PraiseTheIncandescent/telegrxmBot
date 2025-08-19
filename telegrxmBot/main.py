@@ -4,6 +4,8 @@ import logging
 import html
 import tweepy
 import threading
+import time
+import requests
 
 from dotenv import load_dotenv
 from flask import Flask
@@ -28,6 +30,7 @@ BEARER_TOKEN = os.environ.get("BEARER_TOKEN")
 MANAGER_CHAT_ID = os.environ.get("MANAGER_CHAT_ID")
 INFO_CHAT_ID = os.environ.get("INFO_CHAT_ID")
 PUBLISH_CHAT_ID = os.environ.get("PUBLISH_CHAT_ID")
+APP_URL = os.environ.get("APP_URL")  # full URL for keep-alive ping
 
 twitter_client = None
 media_client = None
@@ -119,18 +122,31 @@ def remove_uploaded_files():
         if file.endswith((".jpg", ".mp4")):
             os.remove(os.path.join(dir_name, file))
 
+# -------------------- Keep-alive ping --------------------
+def keep_alive():
+    while True:
+        try:
+            requests.get(APP_URL)
+            print("Ping sent to keep app awake ✅")
+        except Exception as e:
+            print("Ping error:", e)
+        time.sleep(300)  # every 5 minutes
+
 # -------------------- Main --------------------
 if __name__ == "__main__":
-    print("🚀 Bot inicializado!")
+    print("🚀 Bot initialized!")
 
     # Initialize bot
     application = Application.builder().token(BOT_TOKEN).build()
     bot = application.bot
     application.add_handler(MessageHandler((filters.TEXT | filters.ATTACHMENT) & ~filters.COMMAND, echo_message))
 
-    # Exec Flask in a different thread
+    # Run Flask in a separate thread
     port = int(os.environ.get("PORT", 10000))
     threading.Thread(target=lambda: app.run(host="0.0.0.0", port=port)).start()
 
-    # Exec bot in main thread
+    # Run keep-alive ping in separate thread
+    threading.Thread(target=keep_alive, daemon=True).start()
+
+    # Run bot in main thread
     application.run_polling(allowed_updates=Update.ALL_TYPES, poll_interval=5)
