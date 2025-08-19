@@ -37,7 +37,7 @@ app = Flask(__name__)
 
 @app.route('/')
 def home():
-    return "Bot corriendo en Render ✅"
+    return "Bot running in Render ✅"
 
 # Bot function handlers
 async def echo_message(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
@@ -121,6 +121,7 @@ def remove_uploaded_files():
             os.remove(os.path.join(dir_name, file))
 
 def run_bot():
+    print("🚀 Bot initialized!")
     global bot
     application = Application.builder().token(BOT_TOKEN).build()
     bot = application.bot
@@ -128,9 +129,7 @@ def run_bot():
     application.run_polling(allowed_updates=Update.ALL_TYPES, poll_interval=5)
 
 if __name__ == "__main__":
-    # Arrancar el bot en un hilo separado
     threading.Thread(target=run_bot).start()
     
-    # Arrancar Flask para exponer puerto
     port = int(os.environ.get("PORT", 10000))
     app.run(host="0.0.0.0", port=port)
