@@ -145,7 +145,6 @@ def keep_alive():
     while True:
         try:
             requests.get(APP_URL)
-            print("Ping sent to keep app awake ✅")
         except Exception as e:
             print("Ping error:", e)
         time.sleep(600)  # every 10 minutes
