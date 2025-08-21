@@ -5,6 +5,7 @@ import html
 import tweepy
 import threading
 import time
+import random
 import requests
 
 from dotenv import load_dotenv
@@ -62,11 +63,28 @@ async def echo_message(update: Update, _: ContextTypes.DEFAULT_TYPE) -> None:
         else:
             await bot.send_message(chat_id=MANAGER_CHAT_ID, text=f"username: {update.effective_chat.username}, id: {update.effective_chat.id}\n\n{update.effective_message.caption_html}")
 
+async def safe_create_tweet(text=None, media_ids=None):
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            if media_ids:
+                twitter_client.create_tweet(text=text, media_ids=media_ids)
+            else:
+                twitter_client.create_tweet(text=text)
+            return True
+        except Exception as e:
+            if attempt < max_retries - 1:
+                wait = 2 ** attempt + random.random()  # backoff exponencial con jitter
+                logger.warning(f"Twitter API error: {e}. Retrying in {wait:.2f}s...")
+                time.sleep(wait)
+            else:
+                raise
+
 async def publish_in_twitter(message: Message) -> None:
     if message.effective_attachment is None:
         formatted_text = format_text(message.text_html)
         if len(formatted_text) <= 280:
-            twitter_client.create_tweet(text=formatted_text)
+            await safe_create_tweet(text=formatted_text)
             await bot.send_message(chat_id=INFO_CHAT_ID, text="Tweet published successfully")
         else:
             await bot.send_message(chat_id=INFO_CHAT_ID, text="This tweet is too long, cannot be posted. Max: 280")
@@ -77,7 +95,7 @@ async def publish_in_twitter(message: Message) -> None:
                 new_file = await message.effective_attachment[-1].get_file()
                 file = await new_file.download_to_drive()
                 media_id = media_client.media_upload(file).media_id_string
-                twitter_client.create_tweet(text=formatted_text, media_ids=[media_id])
+                await safe_create_tweet(text=formatted_text, media_ids=[media_id])
                 remove_uploaded_files()
                 await bot.send_message(chat_id=INFO_CHAT_ID, text="Tweet published successfully")
             else:
