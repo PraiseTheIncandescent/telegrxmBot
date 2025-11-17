@@ -89,7 +89,7 @@ async def publish_in_twitter(message: Message) -> None:
         else:
             await bot.send_message(chat_id=INFO_CHAT_ID, text="This tweet is too long, cannot be posted. Max: 280")
     else:
-        formatted_text = format_text(message.caption_html)
+        formatted_text = format_text(message.caption_html or "")
         if len(formatted_text) <= 280:
             if isinstance(message.effective_attachment, tuple):
                 new_file = await message.effective_attachment[-1].get_file()
